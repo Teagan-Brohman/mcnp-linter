@@ -1,0 +1,8 @@
+{
+  "name": "mcnp-linter-client",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+out/
+*.js.map
+.vscode-test/
+*.tsbuildinfo
+*.vsix
+.vsix-staging/
+.desloppify/
+
+# Claude Code
+.claude/
+CLAUDE.md
+docs/plans/

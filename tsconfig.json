@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "composite": true
+  },
+  "references": [
+    { "path": "./client" },
+    { "path": "./server" }
+  ],
+  "files": []
+}

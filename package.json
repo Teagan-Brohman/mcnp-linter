@@ -1,0 +1,286 @@
+{
+  "name": "mcnp-linter",
+  "displayName": "MCNP Linter",
+  "description": "Language server-based linter for MCNP input files",
+  "version": "0.1.0",
+  "license": "MIT",
+  "publisher": "Teagan-Brohman",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Teagan-Brohman/vscode-mcnp-linter.git"
+  },
+  "workspaces": ["client", "server"],
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "bin": {
+    "mcnp-fmt": "./server/out/formatter/cli.js"
+  },
+  "main": "./client/out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "mcnp",
+        "extensions": [
+          ".i",
+          ".inp",
+          ".mcnp"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": [
+      {
+        "id": "mcnpLinter.general",
+        "title": "General",
+        "order": 1,
+        "properties": {
+          "mcnpLinter.dataPath": {
+            "type": "string",
+            "default": "",
+            "description": "Path to MCNP cross-section data directory (containing xsdir).",
+            "order": 1
+          },
+          "mcnpLinter.validateOnType": {
+            "type": "boolean",
+            "default": true,
+            "description": "Validate MCNP input as you type.",
+            "order": 2
+          },
+          "mcnpLinter.debounceMs": {
+            "type": "number",
+            "default": 500,
+            "description": "Debounce delay in milliseconds for validation.",
+            "order": 3
+          },
+          "mcnpLinter.materialDisplay": {
+            "type": "string",
+            "enum": ["isotope", "zaid"],
+            "default": "isotope",
+            "description": "How to display material components in hover: 'isotope' (U-235) or 'zaid' (92235.80c).",
+            "order": 4
+          },
+          "mcnpLinter.resolveReadFiles": {
+            "type": "boolean",
+            "default": false,
+            "description": "Parse files referenced by READ cards and include their contents in validation.",
+            "order": 5
+          }
+        }
+      },
+      {
+        "id": "mcnpLinter.diagnostics",
+        "title": "Diagnostics",
+        "order": 2,
+        "properties": {
+          "mcnpLinter.suppressChecks": {
+            "type": "array",
+            "items": { "type": "number" },
+            "default": [],
+            "description": "List of check numbers to suppress. Example: [4, 33] suppresses 'plausible mass number' and 'unused surface' warnings.",
+            "order": 1
+          },
+          "mcnpLinter.warnLineLength": {
+            "type": "boolean",
+            "default": false,
+            "description": "Warn when input lines exceed 80 columns. Enable for workflows targeting older MCNP versions.",
+            "order": 2
+          }
+        }
+      },
+      {
+        "id": "mcnpLinter.editorFeatures",
+        "title": "Editor Features",
+        "order": 3,
+        "properties": {
+          "mcnpLinter.codeLens.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show reference counts above cell, surface, and material definitions.",
+            "order": 1
+          },
+          "mcnpLinter.inlayHints.surfaceTypes": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show surface type mnemonics (SO, CZ, etc.) as inlay hints next to surface references in cell geometry.",
+            "order": 2
+          },
+          "mcnpLinter.semanticTokens.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable semantic token highlighting for cell numbers, surface references, material IDs, and keywords.",
+            "order": 3
+          },
+          "mcnpLinter.callHierarchy.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable call hierarchy for FILL/U universe nesting navigation.",
+            "order": 4
+          },
+          "mcnpLinter.selectionRanges.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable smart selection ranges that expand from token to line to card to block.",
+            "order": 5
+          },
+          "mcnpLinter.asciiSurfaceArt": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show ASCII art diagrams for surface types in hover tooltips.",
+            "order": 6
+          }
+        }
+      },
+      {
+        "id": "mcnpLinter.formatter",
+        "title": "Formatter",
+        "order": 4,
+        "properties": {
+          "mcnpLinter.formatter.preset": {
+            "type": "string",
+            "enum": ["default", "legacy"],
+            "default": "default",
+            "description": "Formatter preset. 'default': modern MCNP6 style (5-space indent). 'legacy': 80-column limit with & continuations.",
+            "order": 1
+          },
+          "mcnpLinter.formatter.continuationStyle": {
+            "type": "string",
+            "enum": ["indent", "ampersand"],
+            "default": "indent",
+            "description": "Continuation line style. 'indent': 5+ space indent (§4.4.6). 'ampersand': trailing & marker.",
+            "order": 2
+          },
+          "mcnpLinter.formatter.continuationIndent": {
+            "type": "number",
+            "default": 5,
+            "minimum": 5,
+            "description": "Number of spaces for continuation line indent (minimum 5 per MCNP spec §4.4.6).",
+            "order": 3
+          },
+          "mcnpLinter.formatter.maxLineLength": {
+            "type": "number",
+            "default": 0,
+            "minimum": 0,
+            "maximum": 128,
+            "description": "Maximum line length. 0 = no wrapping. Maximum 128 per MCNP spec (§3.2.2).",
+            "order": 4
+          },
+          "mcnpLinter.formatter.tabHandling": {
+            "type": "string",
+            "enum": ["convert", "preserve"],
+            "default": "convert",
+            "description": "Tab handling. 'convert': expand to spaces at MCNP's 8-char tab stops (§3.2.2). 'preserve': leave as-is.",
+            "order": 5
+          },
+          "mcnpLinter.formatter.lineEnding": {
+            "type": "string",
+            "enum": ["lf", "crlf"],
+            "default": "lf",
+            "description": "Line ending style. 'lf': Unix (\\n). 'crlf': Windows (\\r\\n).",
+            "order": 6
+          },
+          "mcnpLinter.formatter.trimTrailingWhitespace": {
+            "type": "boolean",
+            "default": true,
+            "description": "Remove trailing whitespace from lines.",
+            "order": 7
+          },
+          "mcnpLinter.formatter.maxConsecutiveBlankLines": {
+            "type": "number",
+            "default": 2,
+            "minimum": 0,
+            "description": "Maximum consecutive blank lines allowed within a block.",
+            "order": 8
+          },
+          "mcnpLinter.formatter.keywordSpacing": {
+            "type": "string",
+            "enum": ["compact", "spaced", "preserve"],
+            "default": "compact",
+            "description": "Spacing around = in KEYWORD=value pairs. 'compact': KEY=val. 'spaced': KEY = val. 'preserve': leave as-is.",
+            "order": 9
+          },
+          "mcnpLinter.formatter.alignCellColumns": {
+            "type": "boolean",
+            "default": true,
+            "description": "Align cell card columns (ID, material, density, geometry) across consecutive cells.",
+            "order": 10
+          },
+          "mcnpLinter.formatter.normalizeGeometrySpacing": {
+            "type": "boolean",
+            "default": true,
+            "description": "Normalize whitespace in cell geometry expressions to single spaces.",
+            "order": 11
+          },
+          "mcnpLinter.formatter.alignSurfaceColumns": {
+            "type": "boolean",
+            "default": true,
+            "description": "Align surface card columns (ID, transform, mnemonic, parameters) across consecutive surfaces.",
+            "order": 12
+          },
+          "mcnpLinter.formatter.alignSurfaceParameters": {
+            "type": "boolean",
+            "default": true,
+            "description": "Align numeric parameters across consecutive surfaces of the same type.",
+            "order": 13
+          },
+          "mcnpLinter.formatter.alignMaterialComponents": {
+            "type": "boolean",
+            "default": true,
+            "description": "Align ZAID and fraction columns in material cards.",
+            "order": 14
+          },
+          "mcnpLinter.formatter.materialComponentThreshold": {
+            "type": "number",
+            "default": 3,
+            "minimum": 1,
+            "description": "Number of ZAID+fraction pairs above which material components are formatted one per line.",
+            "order": 15
+          },
+          "mcnpLinter.formatter.alignTallyBins": {
+            "type": "boolean",
+            "default": true,
+            "description": "Align values in energy, time, and cosine bin cards.",
+            "order": 16
+          },
+          "mcnpLinter.formatter.alignInlineComments": {
+            "type": "boolean",
+            "default": false,
+            "description": "Align inline $ comments to a target column.",
+            "order": 17
+          },
+          "mcnpLinter.formatter.inlineCommentColumn": {
+            "type": "number",
+            "default": 40,
+            "minimum": 1,
+            "description": "Target column for inline comment alignment (when alignInlineComments is enabled).",
+            "order": 18
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "build:production": "node esbuild.mjs --production",
+    "build:tsc": "npm run build:tsc:client && npm run build:tsc:server",
+    "build:tsc:client": "cd client && npx tsc -b",
+    "build:tsc:server": "cd server && npx tsc -b",
+    "watch": "node esbuild.mjs --watch",
+    "test": "vitest run",
+    "package": "npm run build:production && npx @vscode/vsce package --no-dependencies",
+    "lint": "npx tsc --noEmit --project server/tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/vscode": "^1.82.0",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.27.4",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
