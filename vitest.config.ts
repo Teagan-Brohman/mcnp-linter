@@ -9,7 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // Allow test imports like '../../server/src/...' to resolve
-      'vscode-languageserver/node': path.resolve(__dirname, 'server/node_modules/vscode-languageserver/node.js'),
+      'vscode-languageserver/node': path.resolve(__dirname, 'node_modules/vscode-languageserver/node.js'),
     },
   },
 });
