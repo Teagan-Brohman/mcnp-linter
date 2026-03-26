@@ -31,7 +31,7 @@ This won't magically fix bad MCNP files but may help the ocassional debugging fo
 | Call Hierarchy | Navigate FILL/U universe nesting |
 | Selection Ranges | Smart expand/shrink from token to card to block |
 | Folding Ranges | Collapse blocks and multi-line cards |
-| Document Formatting | CST-based formatter (see below) |
+| Document Formatting | CST-based formatter (Still in Testing) |
 
 ### Formatter [Still In Testing]
 
