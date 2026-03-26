@@ -78,7 +78,7 @@ export interface SurfaceCard {
 }
 
 /** Known material card keyword names (NLIB, PLIB, PNLIB, ELIB, HLIB). */
-export type MaterialKeyword = 'NLIB' | 'PLIB' | 'PNLIB' | 'ELIB' | 'HLIB';
+export type MaterialKeyword = 'NLIB' | 'PLIB' | 'PNLIB' | 'ELIB' | 'HLIB' | 'ALIB' | 'SLIB';
 
 /** Recognized MCNP cell parameter base names (before any :particle suffix). */
 export type CellParameterName =

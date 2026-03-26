@@ -1,4 +1,4 @@
-import { MaterialCard, ZaidEntry, ThermalCard, ThermalTableEntry, ParameterDataCard, ReadCard, TallyCard, TallyBinGroup, TallyBinEntry, TallyType, TallyModifierCard, TallyModifierCardType, TallyChain, TallyChainLevel, TransformCard, ModeCard, NpsCard, CtmeCard, KcodeCard, KsrcCard, SdefCard, SourceDistCard, ImpCard, SourceRange } from '../types';
+import { MaterialCard, MaterialKeyword, ZaidEntry, ThermalCard, ThermalTableEntry, ParameterDataCard, ReadCard, TallyCard, TallyBinGroup, TallyBinEntry, TallyType, TallyModifierCard, TallyModifierCardType, TallyChain, TallyChainLevel, TransformCard, ModeCard, NpsCard, CtmeCard, KcodeCard, KsrcCard, SdefCard, SourceDistCard, ImpCard, SourceRange } from '../types';
 import { LogicalLine } from './tokenizer';
 
 /**
@@ -558,7 +558,7 @@ export function parseMaterialCard(line: LogicalLine): MaterialCard {
   }
 
   const components: ZaidEntry[] = [];
-  const keywords = new Map<string, string>();
+  const keywords = new Map<MaterialKeyword, string>();
 
   let i = 0;
   while (i < tokens.length) {
@@ -569,7 +569,7 @@ export function parseMaterialCard(line: LogicalLine): MaterialCard {
       const eqIdx = token.indexOf('=');
       const key = token.substring(0, eqIdx);
       const value = token.substring(eqIdx + 1);
-      keywords.set(key.toUpperCase(), value);
+      keywords.set(key.toUpperCase() as MaterialKeyword, value);
       i++;
     } else {
       // Should be a ZAID followed by a fraction
