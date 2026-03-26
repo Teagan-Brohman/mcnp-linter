@@ -1,117 +1,21 @@
 # MCNP Linter
 
 A Visual Studio Code language server for MCNP input files (`.i`, `.inp`, `.mcnp`).
-Provides 62 cross-reference validation checks, 17 LSP features, and a CST-based formatter
-that never changes input semantics.
+Provides validation checks, LSP features, and early stage CST-based formatter. 
 
-## Installation
+This is a mostly a side project of mine so there is probably a large amount of edge cases that have not been even thought about. Additionally there might be warnings that aren't actually warnings, should be able to silence in settings if need be.
 
-Search for **MCNP Linter** (`mcnp-community.mcnp-linter`) in the VS Code Extensions view,
-or install from the command line:
+This won't magically fix bad MCNP files but may help the ocassional debugging for surfaces, materials, or those sneaky double blank line delimiters.
 
-```
-code --install-extension mcnp-community.mcnp-linter
-```
-
-> **Companion extension** -- pair with
-> [MCNP6 Syntax Highlighting and Snippets](https://marketplace.visualstudio.com/items?itemName=mcnp-community.mcnp)
+> **Companion extension** - recommend to pair with
+> [MCNP6 Syntax Highlighting and Snippets](https://marketplace.visualstudio.com/items?itemName=repositony.vscodemcnp)
 > for grammar-level highlighting and code snippets.
-
-## Features
-
-### Validation
-
-62 numbered checks run as you type, covering:
-
-- **Cell/surface/material references** -- undefined, duplicate, and unused entity detection
-- **ZAID validity** -- atomic number Z 1--118, plausible mass numbers, xsdir library lookup
-- **Universe graph** -- FILL/LAT/U consistency, lattice cell isolation, reversed FILL ranges
-- **Thermal S(a,b)** -- MT/M existence, library temperature consistency, naming conventions
-- **Tallies** -- bin monotonicity, modifier cross-refs, particle vs MODE, F6/F7 in void cells
-- **Source definitions** -- SDEF keyword validation, SI/SP/SB distribution refs, CEL/SUR refs
-- **Global** -- missing NPS/CTME, missing source card, line length, KSRC point counts
-
-Individual checks can be suppressed by number via `mcnpLinter.suppressChecks`.
-
-<details>
-<summary>Full validation check list</summary>
-
-| # | Check | Severity |
-|-|-|-|
-| 1 | Cell references undefined surface | error |
-| 2 | Cell references undefined material | error |
-| 2b | Void cell with density or material cell without density | warning/error |
-| 3 | Invalid atomic number Z (not 1--118) | error |
-| 4 | Implausible isotope mass number | warning |
-| 5a | FILL references undefined universe | error |
-| 5b | LAT cell missing FILL | error |
-| 5c | LAT value not in {1, 2} | error |
-| 5d | Array FILL element count or undefined universe | error |
-| 6 | MT card references undefined material | error |
-| 7 | Inconsistent library suffixes within material | warning |
-| 8 | MT/M temperature inconsistency (xsdir or suffix fallback) | warning |
-| 9 | S(a,b) name vs neutron generation mismatch | warning |
-| 10 | Cell number out of range 1--99,999,999 | error |
-| 11 | Material number out of range 0--99,999,999 | error |
-| 12 | Mixed atom/weight fractions in material | error |
-| 13 | LIKE BUT references undefined cell | error |
-| 14 | Cell complement #N references undefined cell | error |
-| 15 | Lattice cell not alone in universe | error |
-| 16 | Surface parameter count mismatch | warning |
-| 17 | ZAID+suffix not found in xsdir | warning |
-| 18 | READ card informational diagnostic | warning |
-| 19 | Tally bin references undefined cell/surface | error |
-| 20 | F7 tally restricted to neutrons | error |
-| 21 | Duplicate tally type + particle combination | error |
-| 22 | Tally modifier references undefined tally | warning |
-| 23 | CF cell flagging references undefined cell | error |
-| 24 | SF/FS surface flagging references undefined surface | error |
-| 25 | FM material references undefined material | error |
-| 26 | Energy bins not monotonically increasing | error |
-| 27 | Time bins not monotonically increasing | error |
-| 28 | Cosine bins invalid type or last value not 1 | error |
-| 29 | CM cosine type not 1 or 2 | error |
-| 30 | EM count does not match E bin count | error |
-| 31 | TM count does not match T bin count | error |
-| 32 | DE/DF bin count mismatch | error |
-| 33 | Surface defined but never referenced | warning |
-| 34 | Material defined but never referenced | warning |
-| 35 | Duplicate cell number | error |
-| 36 | Duplicate surface number | error |
-| 37 | Duplicate material number | error |
-| 38 | Duplicate MT card number | error |
-| 39 | Surface references undefined transform | warning |
-| 40 | Duplicate transform number | error |
-| 41 | Missing NPS or CTME termination card | warning |
-| 42 | SDEF distribution references undefined SI/SP | error |
-| 43 | SDEF CEL/SUR references undefined cell/surface | error |
-| 44 | Tally particle not in MODE card | warning |
-| 45 | SDEF PAR particle not in MODE card | warning |
-| 46 | Surface number out of range 1--99,999,999 | error |
-| 47 | No source definition (SDEF or KCODE) | warning |
-| 48 | F6/F7 tally bins reference void cell | warning |
-| 49 | Cell missing IMP for particle in MODE | warning |
-| 50 | Line exceeds 80 columns (opt-in) | warning |
-| 51 | Array FILL reversed range (hi < lo) | error |
-| 52 | LIKE BUT circular reference chain | error |
-| 53 | IMP entry count vs cell count mismatch | warning |
-| 54 | SDEF POS= requires 3 values | error |
-| 55 | SDEF AXS=/VEC= requires 3 values | error |
-| 56 | SDEF ERG= must be positive | error |
-| 57 | KSRC point count not a multiple of 3 | error |
-| 58 | Unrecognized cell parameter name | warning |
-| 59 | TMP must be positive (MeV) | error |
-| 60 | IMP values must be non-negative | error |
-| 61 | Transform number out of range 1--99,999 | error |
-| 62 | Surface transform must use TR 1--999 | error |
-
-</details>
 
 ### Language Server Features
 
 | Feature | Description |
 |-|-|
-| Hover | Cell/surface summaries, ZAID element names, thermal S(a,b) tables, optional ASCII surface art |
+| Hover | Cell/surface summaries, ZAID element names, thermal S(a,b) tables |
 | Go to Definition | Jump to cell, surface, or material definitions |
 | Find All References | Locate every reference to a cell, surface, or material |
 | Rename Symbol | Rename cells, surfaces, or materials across the file with validation |
@@ -129,10 +33,9 @@ Individual checks can be suppressed by number via `mcnpLinter.suppressChecks`.
 | Folding Ranges | Collapse blocks and multi-line cards |
 | Document Formatting | CST-based formatter (see below) |
 
-### Formatter
+### Formatter [Still In Testing]
 
-The formatter operates on a concrete syntax tree and is guaranteed lossless -- it never
-changes the meaning of your input. Available as both an in-editor provider and a standalone CLI.
+The formatter operates on a concrete syntax tree. Available as both an in-editor provider and a standalone CLI.
 
 Key capabilities:
 
@@ -143,50 +46,9 @@ Key capabilities:
 - Aligns tally bins, surface parameters, and inline comments
 - Collapses excessive blank lines
 
-## Formatter CLI
-
-The `mcnp-fmt` command can be used outside VS Code for batch formatting and CI checks.
-
-```bash
-# Format a file in place
-npx mcnp-fmt input.i
-
-# Check formatting without modifying (exits non-zero if changes needed)
-npx mcnp-fmt --check input.i
-
-# Format with a specific preset
-npx mcnp-fmt --preset legacy input.i
-
-# Read from stdin, write to stdout
-cat input.i | npx mcnp-fmt --stdin
-```
-
-### `.mcnpfmt.json`
-
-Place a `.mcnpfmt.json` file in your project root to configure formatting options.
-The CLI and VS Code extension both read this file.
-
-```json
-{
-  "preset": "default",
-  "continuationStyle": "indent",
-  "continuationIndent": 5,
-  "maxLineLength": 0,
-  "tabHandling": "convert",
-  "trimTrailingWhitespace": true,
-  "alignCellColumns": true,
-  "normalizeGeometrySpacing": true,
-  "alignSurfaceColumns": true,
-  "alignMaterialComponents": true,
-  "keywordSpacing": "compact"
-}
-```
-
-Any option not specified falls back to the preset defaults.
-
 ## Configuration
 
-All settings live under the `mcnpLinter` namespace. The most commonly changed settings:
+All settings live under the `mcnpLinter` namespace. Stuff you might want to change:
 
 | Setting | Default | Description |
 |-|-|-|
@@ -195,7 +57,7 @@ All settings live under the `mcnpLinter` namespace. The most commonly changed se
 | `materialDisplay` | `"isotope"` | Hover display: `"isotope"` (U-235) or `"zaid"` (92235.80c) |
 | `warnLineLength` | `false` | Warn when lines exceed 80 columns |
 | `suppressChecks` | `[]` | Check numbers to suppress, e.g. `[4, 33]` |
-| `formatter.preset` | `"default"` | `"default"` or `"legacy"` |
+| `formatter.preset` | `"default"` | `"default"` or future work (legacy) |
 
 <details>
 <summary>Full settings reference</summary>
@@ -222,7 +84,7 @@ All settings live under the `mcnpLinter` namespace. The most commonly changed se
 | `callHierarchy.enabled` | boolean | `true` | FILL/U universe call hierarchy |
 | `selectionRanges.enabled` | boolean | `true` | Smart selection ranges |
 
-**Formatter**
+**Formatter [Still In Testing]**
 
 | Setting | Type | Default | Description |
 |-|-|-|-|
@@ -250,7 +112,10 @@ All settings live under the `mcnpLinter` namespace. The most commonly changed se
 ## Requirements
 
 - VS Code 1.82 or later
-- For xsdir-based checks (17, 8): set `mcnpLinter.dataPath` to your MCNP data directory
+- For xsdir-based checks (17, 8): set `mcnpLinter.dataPath` to your MCNP data directory, whichever one has the xsdir file in it.
+
+## Attributions
+Icon made by afif fudin from [fa](https://www.flaticon.com)
 
 ## License
 
