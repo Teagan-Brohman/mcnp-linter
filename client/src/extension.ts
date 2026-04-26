@@ -85,12 +85,65 @@ export function activate(context: ExtensionContext): void {
     statusBar.show();
   }
 
+  // xsdir status bar item — sits left of the diagnostic-count item.
+  const xsdirStatusBar = window.createStatusBarItem(StatusBarAlignment.Left, 99);
+  xsdirStatusBar.name = 'MCNP xsdir';
+  xsdirStatusBar.command = 'mcnp.openDataPathSetting';
+  context.subscriptions.push(xsdirStatusBar);
+
+  interface XsdirStatusPayload {
+    state: 'unconfigured' | 'loaded' | 'not-found' | 'parse-error';
+    configuredPath: string;
+    resolvedFile?: string;
+    zaidCount?: number;
+    errorMessage?: string;
+  }
+
+  let lastXsdirStatus: XsdirStatusPayload = { state: 'unconfigured', configuredPath: '' };
+
+  function updateXsdirStatus(): void {
+    const editor = window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'mcnp') {
+      xsdirStatusBar.hide();
+      return;
+    }
+    const s = lastXsdirStatus;
+    switch (s.state) {
+      case 'loaded':
+        xsdirStatusBar.text = `$(database) xsdir: ${s.zaidCount ?? '?'}`;
+        xsdirStatusBar.tooltip = `Loaded ${s.zaidCount ?? 0} ZAIDs from ${s.resolvedFile ?? '(unknown)'}`;
+        break;
+      case 'unconfigured':
+        xsdirStatusBar.text = '$(database) xsdir: not configured';
+        xsdirStatusBar.tooltip = 'Set mcnpLinter.dataPath to enable xsdir-aware checks.';
+        break;
+      case 'not-found':
+        xsdirStatusBar.text = '$(warning) xsdir: not found';
+        xsdirStatusBar.tooltip = s.errorMessage ?? `No xsdir under ${s.configuredPath}`;
+        break;
+      case 'parse-error':
+        xsdirStatusBar.text = '$(error) xsdir: parse error';
+        xsdirStatusBar.tooltip = s.errorMessage ?? 'Failed to parse xsdir.';
+        break;
+    }
+    xsdirStatusBar.show();
+  }
+
+  context.subscriptions.push(
+    commands.registerCommand('mcnp.openDataPathSetting', () =>
+      commands.executeCommand('workbench.action.openSettings', 'mcnpLinter.dataPath'),
+    ),
+  );
+
   context.subscriptions.push(
     languages.onDidChangeDiagnostics(() => updateStatusBar())
   );
 
   context.subscriptions.push(
-    window.onDidChangeActiveTextEditor(() => updateStatusBar())
+    window.onDidChangeActiveTextEditor(() => {
+      updateStatusBar();
+      updateXsdirStatus();
+    })
   );
 
   // Bridge command: CodeLens passes a string URI and plain {line,character} object.
@@ -114,7 +167,14 @@ export function activate(context: ExtensionContext): void {
   );
 
   context.subscriptions.push(client);
-  client.start().then(() => updateStatusBar());
+  client.start().then(() => {
+    client.onNotification('mcnp/xsdirStatus', (payload: XsdirStatusPayload) => {
+      lastXsdirStatus = payload;
+      updateXsdirStatus();
+    });
+    updateStatusBar();
+    updateXsdirStatus();
+  });
 }
 
 export function deactivate(): Thenable<void> | undefined {

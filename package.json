@@ -34,6 +34,12 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "commands": [
+      {
+        "command": "mcnp.openDataPathSetting",
+        "title": "MCNP: Open Data Path Setting"
+      }
+    ],
     "configuration": [
       {
         "id": "mcnpLinter.general",

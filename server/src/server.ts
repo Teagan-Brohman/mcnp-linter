@@ -37,13 +37,13 @@ import { getSelectionRanges } from './selectionRange/selectionRangeProvider';
 import { McnpDocument, ParseError } from './types';
 import { DocumentIndex } from './analysis/documentIndex';
 import { UniverseMap } from './analysis/universeMap';
-import { parseXsdir, XsdirData } from './data/xsdirParser';
+import { XsdirData } from './data/xsdirParser';
+import { loadXsdirWithStatus, XsdirStatus } from './data/xsdirStatus';
 import { toRange } from './analysis/lspUtils';
-import { normalizePath } from './utils/serverUtils';
 import { formatToEdits } from './formatter/formatter';
 import { FormatterConfig } from './formatter/config';
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname, resolve } from 'path';
+import { readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const connection = createConnection(ProposedFeatures.all);
@@ -71,27 +71,19 @@ let warnLineLength = false;
 let suppressChecks: number[] = [];
 let formatterConfig: Partial<FormatterConfig> = {};
 let xsdirData: XsdirData | undefined;
+let xsdirStatus: XsdirStatus = { state: 'unconfigured', configuredPath: '' };
 
-
-/** Returns parsed XsdirData if found, or undefined (with console warnings for failures). */
-function loadXsdir(path: string): XsdirData | undefined {
-  if (!path) return undefined;
-  const normalized = normalizePath(path);
-
-  const candidates = ['xsdir_mcnp6.3', 'xsdir_mcnp6.2', 'xsdir_mcnp6.1', 'xsdir'];
-
-  for (const name of candidates) {
-    const xsdirPath = join(normalized, name);
-    if (!existsSync(xsdirPath)) continue;
-    try {
-      return parseXsdir(readFileSync(xsdirPath, 'utf-8'));
-    } catch (e) {
-      connection.console.warn(`Failed to parse ${xsdirPath}: ${e instanceof Error ? e.message : String(e)}`);
-    }
+/** Reload xsdir from `dataPath`, refresh global state, and notify the client. */
+function refreshXsdir(): void {
+  const r = loadXsdirWithStatus(dataPath);
+  xsdirData = r.data;
+  xsdirStatus = r.status;
+  if (r.status.state === 'parse-error') {
+    connection.console.warn(`Failed to parse ${r.status.resolvedFile}: ${r.status.errorMessage}`);
+  } else if (r.status.state === 'not-found') {
+    connection.console.warn(r.status.errorMessage ?? '');
   }
-
-  connection.console.warn(`No usable xsdir file found in ${normalized} (tried: ${candidates.join(', ')})`);
-  return undefined;
+  connection.sendNotification('mcnp/xsdirStatus', xsdirStatus);
 }
 
 // Debounce timers keyed by URI
@@ -308,7 +300,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
   if (params.initializationOptions) {
     applySettings(params.initializationOptions);
   }
-  xsdirData = loadXsdir(dataPath);
+  refreshXsdir();
 
   return {
     capabilities: {
@@ -341,7 +333,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
 connection.onDidChangeConfiguration((change) => {
   const settings = change.settings?.mcnpLinter;
   if (settings && applySettings(settings)) {
-    xsdirData = loadXsdir(dataPath);
+    refreshXsdir();
   }
   documents.all().forEach(validateDocument);
 });
