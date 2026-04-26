@@ -164,6 +164,24 @@ NPS 100
       expect(fillError).toBeUndefined();
     });
 
+    it('does not flag lattice FILL universe IDs as surface refs (issue #5 regression)', () => {
+      const path = join(__dirname, '..', '..', 'realWorldTestFiles', 'u-zr4.inp');
+      const input = readFileSync(path, 'utf8');
+      const doc = parseInputFile(input);
+      const diags = validateCrossReferences(doc);
+
+      // Lines 162-186 hold cell 450's lattice + the tab-indented universe-ID array.
+      const errsInFillRange = diags.filter(d =>
+        d.range.startLine >= 161 && d.range.startLine <= 185 && /surface/i.test(d.message)
+      );
+      expect(errsInFillRange).toEqual([]);
+
+      // Confirm the FILL array was actually parsed (not just silenced).
+      const cell450 = doc.cells.find(c => c.id === 450);
+      expect(cell450?.arrayFill?.universes.length).toBe(23 * 23 * 1);
+      expect(cell450?.geometry.surfaceRefs.map(r => r.id).sort()).toEqual([20, 21, 22, 23]);
+    });
+
     it('flags LAT without FILL', () => {
       const doc = parseInputFile(`lat no fill
 1  0  -1  U=1 LAT=1 IMP:N=1
