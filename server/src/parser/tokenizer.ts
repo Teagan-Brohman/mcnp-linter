@@ -47,15 +47,26 @@ function stripInlineComment(line: string): string {
 }
 
 /**
- * Returns true if columns 1-5 (indices 0-4) are all spaces,
- * meaning this is a continuation line (5-blank-column indent).
+ * Returns true if the first non-blank character of `line` lies at visual
+ * column 6 or later (i.e., columns 1-5 are blank), per MCNP §4.4.6.
+ *
+ * Per MCNP §4.4, a tab expands to the next tab stop at columns 9, 17, 25, …
+ * (every 8 columns), so a single leading tab covers columns 1-8 and counts
+ * as 5+ blank columns.
  */
 function isContinuationByIndent(line: string): boolean {
-  if (line.length < 5) return false;
-  for (let i = 0; i < 5; i++) {
-    if (line[i] !== ' ') return false;
+  let col = 0;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === ' ') {
+      col++;
+    } else if (c === '\t') {
+      col = Math.floor(col / 8) * 8 + 8;
+    } else {
+      return col >= 5;
+    }
   }
-  return true;
+  return false;
 }
 
 /**

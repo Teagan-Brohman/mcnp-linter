@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { tokenizeInput } from '../../server/src/parser/tokenizer';
 
 describe('tokenizer', () => {
@@ -210,5 +212,93 @@ M1 1001.80c 1
     expect(crlfResult.surfaceLines.length).toBe(lfResult.surfaceLines.length);
     expect(crlfResult.dataLines.length).toBe(lfResult.dataLines.length);
     expect(crlfResult.cellLines[0].text).toBe(lfResult.cellLines[0].text);
+  });
+});
+
+describe('tokenizer — tab handling in continuation detection', () => {
+  it('treats a single leading tab as a continuation (tab expands past col 5)', () => {
+    const input = `title
+1  1 -2.7
+\t-1 -2 3  IMP:N=1
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.cellLines.length).toBe(1);
+    expect(result.cellLines[0].text).toContain('-1');
+    expect(result.cellLines[0].text).toContain('-2');
+  });
+
+  it('treats spaces+tab whose tab stop reaches col 6+ as a continuation', () => {
+    // 3 spaces + tab → tab advances col 3 to col 8 → first non-blank at col 9
+    const input = `title
+1  1 -2.7
+   \t-1 -2 3  IMP:N=1
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.cellLines.length).toBe(1);
+    expect(result.cellLines[0].text).toContain('-1');
+  });
+
+  it('joins a tab-prefixed line as continuation of the prior card', () => {
+    const input = `title
+1  1 -2.7  -1 -2 3  IMP:N=1
+\tVOL=1.5
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.cellLines.length).toBe(1);
+    expect(result.cellLines[0].text).toContain('VOL=1.5');
+  });
+
+  it('rejects 4 spaces (no tab) as a continuation — only 4 blank columns', () => {
+    const input = `title
+1  1 -2.7
+    -1 -2 3  IMP:N=1
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    // 4 leading spaces is NOT enough — should be 2 separate logical cell lines
+    expect(result.cellLines.length).toBe(2);
+  });
+
+  it('handles the u-zr4.inp tab-continuation pattern', () => {
+    const input = `title
+482 0 (-400 500):(-401 501):(-402 502)
+\t:(-410 510):(-411 511):(-412 512) IMP:N=1
+
+1 SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.cellLines.length).toBe(1);
+    expect(result.cellLines[0].text).toContain('-410');
+    expect(result.cellLines[0].text).toContain('-412');
+  });
+
+  it('parses u-zr4.inp without splitting tab-continued cell 482', () => {
+    const path = join(__dirname, '..', '..', 'realWorldTestFiles', 'u-zr4.inp');
+    const input = readFileSync(path, 'utf8');
+    const result = tokenizeInput(input);
+
+    // Cell 482 spans 4 physical lines (148-151 in source) joined by tab continuations.
+    const cell482 = result.cellLines.find(l => l.text.trim().startsWith('482 '));
+    expect(cell482).toBeDefined();
+    expect(cell482!.text).toContain('-435 535'); // last surface union from line 151
+    expect(cell482!.text).toContain('-410 510'); // from line 149
+    expect(cell482!.text).toContain('-420 520'); // from line 150
   });
 });
