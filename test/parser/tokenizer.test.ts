@@ -183,10 +183,11 @@ M1 1001.80c 1
 M1 1001.80c 1
 `;
     // The blank line between surfaces "2 PX 10" and "3 CZ 3" creates 4 blocks.
-    // Surface 3 gets treated as data. Warn about this.
+    // Issue #7 detection: both sides of the stray separator look like surfaces,
+    // so we flag it specifically as a surface-block split.
     const result = tokenizeInput(input);
     expect(result.warnings.length).toBeGreaterThan(0);
-    const splitWarning = result.warnings.find(w => w.message.includes('unexpected'));
+    const splitWarning = result.warnings.find(w => /Stray blank line.*surface/.test(w.message));
     expect(splitWarning).toBeDefined();
   });
 
@@ -397,5 +398,73 @@ M1 1001.80c 1
 `;
     const result = tokenizeInput(input);
     expect(result.warnings.find(w => /uncommented/i.test(w.message))).toBeUndefined();
+  });
+});
+
+describe('tokenizer — stray-separator detection (issue #7)', () => {
+  it('flags a stray separator inside the data block as data|data', () => {
+    const input = `title
+1 0 -1 IMP:N=1
+2 0 1 IMP:N=0
+
+1 SO 5
+
+M1 1001.80c 1
+
+NPS 100
+`;
+    const result = tokenizeInput(input);
+    const stray = result.warnings.find(w => /Stray blank line/.test(w.message));
+    expect(stray).toBeDefined();
+    expect(stray!.message).toContain('data');
+    expect(stray!.severity).toBe('error');
+  });
+
+  it('flags a stray separator inside the cell block as cell|cell', () => {
+    const input = `title
+1 0 -1 IMP:N=1
+
+2 0 1 IMP:N=0
+
+1 SO 5
+
+M1 1001.80c 1
+NPS 100
+`;
+    const result = tokenizeInput(input);
+    const strays = result.warnings.filter(w => /Stray blank line/.test(w.message) && w.message.includes('cell'));
+    expect(strays.length).toBe(1);
+  });
+
+  it('does not flag a normal cell-surface-data structure', () => {
+    const input = `title
+1 0 -1 IMP:N=1
+2 0 1 IMP:N=0
+
+1 SO 5
+
+M1 1001.80c 1
+NPS 100
+`;
+    const result = tokenizeInput(input);
+    expect(result.warnings.find(w => /Stray blank line/.test(w.message))).toBeUndefined();
+  });
+
+  it('flags multiple stray separators independently', () => {
+    const input = `title
+1 0 -1 IMP:N=1
+2 0 1 IMP:N=0
+
+1 SO 5
+
+M1 1001.80c 1
+
+M2 8016.80c 1
+
+NPS 100
+`;
+    const result = tokenizeInput(input);
+    const strays = result.warnings.filter(w => /Stray blank line/.test(w.message));
+    expect(strays.length).toBe(2);
   });
 });

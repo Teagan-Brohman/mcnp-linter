@@ -1,3 +1,5 @@
+import { classifyCardLine, CardClass } from './cardClassifier';
+
 interface TokenizerWarning {
   message: string;
   line: number;
@@ -77,6 +79,25 @@ function isBlankLine(line: string): boolean {
 }
 
 /**
+ * Walk a block's physical lines and report the classification of its first and
+ * last "real" cards (skipping comments, blanks, and continuation lines).
+ * Used to diagnose stray block separators (issue #7).
+ */
+function classifyBlock(block: { lines: string[] }): { first: CardClass; last: CardClass } {
+  let first: CardClass = 'unknown';
+  let last: CardClass = 'unknown';
+  for (const line of block.lines) {
+    if (isBlankLine(line) || isCommentLine(line)) continue;
+    if (isContinuationByIndent(line)) continue;
+    const cls = classifyCardLine(line);
+    if (cls === 'unknown') continue;
+    if (first === 'unknown') first = cls;
+    last = cls;
+  }
+  return { first, last };
+}
+
+/**
  * Tokenize an MCNP input file into its logical structure.
  */
 export function tokenizeInput(input: string): TokenizedInput {
@@ -145,40 +166,34 @@ export function tokenizeInput(input: string): TokenizedInput {
     }
   }
 
-  // Check for blank lines beyond the 2 expected separators (cells/surfaces/data).
-  // Per MCNP manual §4.4 (p.247): "A final (optional) blank line at the end of the
-  // data block signals the end of the input file... This region following the blank
-  // line terminator can be used by the user for problem documentation."
-  //
-  // Strategy: MCNP expects exactly 2 blank-line separators. If there are more,
-  // we need to find which ones are "extra" (splitting a block) vs which are the
-  // valid end-of-input terminator. We flag every separator beyond the 2 expected
-  // ones, but ONLY if there is non-comment card content somewhere after the last
-  // blank line (meaning cards are being silently lost). The error goes on ALL
-  // extra separators so the user can find the stray blank line wherever it is.
-  let brokenStructure = false;
-  if (blocks.length > 3) {
-    // Check if any block beyond block 3 contains actual card content
-    const hasCardContentAfter = blocks.slice(3).some(b =>
-      b.lines.some(l => !isCommentLine(l) && !isBlankLine(l))
-    );
-    brokenStructure = hasCardContentAfter;
+  // Step 4a: Classify each block once. We use first/last non-comment, non-continuation
+  // lines to decide whether a separator splits a block of one kind (cell|cell,
+  // surface|surface, data|data) — the strays we want to flag.
+  const blockClasses = blocks.map(classifyBlock);
 
-    if (hasCardContentAfter) {
-      // Cards are being silently lost because a stray blank line splits a block.
-      // We can't tell which separator is "stray" vs "real" (e.g., the stray one
-      // might be separator #2, pushing the real cells/data boundary to #3).
-      // Flag all separators so the user can find the accidental one.
-      const extraCount = blocks.length - 3;
-      for (const pos of blankLinePositions) {
+  // Step 4b: For each consecutive pair, if the prior block's last card and the
+  // next block's first card are the same kind, every blank line between them is
+  // a stray separator that silently drops content (per MCNP §4.4 — every blank
+  // line terminates a section).
+  let brokenStructure = false;
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const above = blockClasses[i].last;
+    const below = blockClasses[i + 1].first;
+    if (above === 'unknown' || below === 'unknown') continue;
+    if (above !== below) continue;
+
+    brokenStructure = true;
+    const lastLineOfAbove = blocks[i].lineNumbers[blocks[i].lineNumbers.length - 1];
+    const firstLineOfBelow = blocks[i + 1].lineNumbers[0];
+    for (const pos of blankLinePositions) {
+      if (pos > lastLineOfAbove && pos < firstLineOfBelow) {
         warnings.push({
-          message: `${extraCount} unexpected blank line separator(s) — MCNP expects exactly 2 (cells/surfaces/data). One of these blank lines is misplaced, causing cards to be silently ignored.`,
+          message: `Stray blank line — both sides look like ${above} cards. MCNP treats this as a block separator, silently dropping everything after it.`,
           line: pos,
           severity: 'error',
         });
       }
     }
-    // else: only comments/blanks after the last separator — valid end-of-input per manual
   }
 
   // Step 4b: Detect uncommented lines sandwiched between full-line comments
