@@ -302,3 +302,100 @@ M1 1001.80c 1
     expect(cell482!.text).toContain('-420 520'); // from line 150
   });
 });
+
+describe('tokenizer — uncommented continuation in commented block (issue #2)', () => {
+  it('warns when a continuation line is sandwiched between two comments', () => {
+    const input = `title
+1  1 -2.7  -1  IMP:N=1
+
+1  SO 5
+
+c M9599 5010.00c 0.014236
+c      24050.00c 0.008284
+      26054.00c 0.037078
+c         26058.00c 0.001789
+c      28058.00c 0.057490
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    const warn = result.warnings.find(w => /uncommented/i.test(w.message));
+    expect(warn).toBeDefined();
+    expect(warn!.severity ?? 'warning').toBe('warning');
+  });
+
+  it('does NOT warn for a normal continuation surrounded by card content', () => {
+    const input = `title
+1  1 -2.7  -1  IMP:N=1
+   VOL=1.5
+2  0   1  IMP:N=0
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.warnings.find(w => /uncommented/i.test(w.message))).toBeUndefined();
+  });
+
+  it('does NOT warn for a continuation with a comment only above', () => {
+    const input = `title
+1  1 -2.7  -1  IMP:N=1
+c some explanation
+   VOL=1.5
+2  0   1  IMP:N=0
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.warnings.find(w => /uncommented/i.test(w.message))).toBeUndefined();
+  });
+
+  it('does NOT warn for a continuation with a comment only below', () => {
+    const input = `title
+1  1 -2.7  -1  IMP:N=1
+   VOL=1.5
+c trailing comment
+2  0   1  IMP:N=0
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.warnings.find(w => /uncommented/i.test(w.message))).toBeUndefined();
+  });
+
+  it('warns once per offending line in a deeply commented block', () => {
+    const input = `title
+1  1 -2.7  -1  IMP:N=1
+
+1  SO 5
+
+c M1 1001.80c 1
+c      2003.10c 2
+       8016.10c 3
+c      3007.10c 4
+       4009.10c 5
+c      5010.10c 6
+M2 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    const warns = result.warnings.filter(w => /uncommented/i.test(w.message));
+    expect(warns.length).toBe(2);
+  });
+
+  it('does NOT warn at the top of a block where there is no preceding comment', () => {
+    const input = `title
+   VOL=1.5
+1  1 -2.7  -1  IMP:N=1
+
+1  SO 5
+
+M1 1001.80c 1
+`;
+    const result = tokenizeInput(input);
+    expect(result.warnings.find(w => /uncommented/i.test(w.message))).toBeUndefined();
+  });
+});

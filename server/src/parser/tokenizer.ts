@@ -181,6 +181,25 @@ export function tokenizeInput(input: string): TokenizedInput {
     // else: only comments/blanks after the last separator — valid end-of-input per manual
   }
 
+  // Step 4b: Detect uncommented lines sandwiched between full-line comments
+  // (issue #2). A continuation-style line (5+ blank leading columns) wedged
+  // between two comment lines is almost always a forgotten `c` prefix on a
+  // line meant to be commented out alongside the rest.
+  for (const block of blocks) {
+    for (let i = 1; i < block.lines.length - 1; i++) {
+      const line = block.lines[i];
+      if (isBlankLine(line) || isCommentLine(line)) continue;
+      if (!isContinuationByIndent(line)) continue;
+      if (isCommentLine(block.lines[i - 1]) && isCommentLine(block.lines[i + 1])) {
+        warnings.push({
+          message: "Possible uncommented line inside a commented block — did you forget the leading 'c'?",
+          line: block.lineNumbers[i],
+          severity: 'warning',
+        });
+      }
+    }
+  }
+
   // Step 5: Convert each block's physical lines to logical lines
   const emptyBlock = { lines: [] as string[], lineNumbers: [] as number[] };
   const cellBlock = blocks.length > 0 ? blocks[0] : emptyBlock;
