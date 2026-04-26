@@ -105,6 +105,9 @@ function toDiagnostic(error: ParseError): Diagnostic {
     source: 'mcnp-linter',
     message: error.message,
   };
+  if (error.checkNumber !== undefined) {
+    diag.code = error.checkNumber;
+  }
   if (error.message.includes('(unused)')) {
     diag.tags = [DiagnosticTag.Unnecessary];
   }

@@ -372,4 +372,49 @@ NPS 1000
     const imp = actions.find(a => a.title.includes('IMP:P'));
     expect(imp).toBeDefined();
   });
+
+  describe('silence-check quick fix (issue #3)', () => {
+    function diagWithCode(line: number, message: string, code?: number): Diagnostic {
+      const d: Diagnostic = {
+        range: { start: { line, character: 0 }, end: { line, character: 10 } },
+        severity: DiagnosticSeverity.Error,
+        message,
+        source: 'mcnp-linter',
+      };
+      if (code !== undefined) d.code = code;
+      return d;
+    }
+
+    it('emits a silence action carrying the mcnp.silenceCheck command', () => {
+      const diag = diagWithCode(1, 'Surface 999 referenced in cell 1 is not defined', 1);
+      const actions = getCodeActions(doc, [diag], inputText, 'file:///x.inp');
+      const silence = actions.find(a => a.title.startsWith('Silence check #1'));
+      expect(silence).toBeDefined();
+      expect(silence!.command?.command).toBe('mcnp.silenceCheck');
+      expect(silence!.command?.arguments).toEqual([1]);
+    });
+
+    it('deduplicates by check number when multiple diagnostics share the same code', () => {
+      const diags = [
+        diagWithCode(1, 'Surface 999 not defined', 1),
+        diagWithCode(2, 'Surface 998 not defined', 1),
+      ];
+      const actions = getCodeActions(doc, diags, inputText, 'file:///x.inp');
+      const silenceActions = actions.filter(a => a.title.startsWith('Silence check #1'));
+      expect(silenceActions.length).toBe(1);
+    });
+
+    it('omits silence action when diagnostic has no code', () => {
+      const diag = diagWithCode(1, 'Some non-code error');
+      const actions = getCodeActions(doc, [diag], inputText, 'file:///x.inp');
+      expect(actions.find(a => a.title.startsWith('Silence check'))).toBeUndefined();
+    });
+
+    it('uses the catalog description in the action title when available', () => {
+      const diag = diagWithCode(1, 'Duplicate tally number F1', 21);
+      const actions = getCodeActions(doc, [diag], inputText, 'file:///x.inp');
+      const silence = actions.find(a => a.title.startsWith('Silence check #21'));
+      expect(silence?.title).toContain('Duplicate tally number');
+    });
+  });
 });

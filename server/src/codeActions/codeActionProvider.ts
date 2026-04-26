@@ -1,6 +1,7 @@
 import { CodeAction, CodeActionKind, Diagnostic, TextEdit, Position } from 'vscode-languageserver/node';
 import { McnpDocument } from '../types';
 import { getAbundances } from '../data/abundances';
+import { describeCheck } from '../data/checkCatalog';
 import { splitLines } from '../utils/text';
 
 export function getCodeActions(
@@ -109,6 +110,20 @@ export function getCodeActions(
         }
       }
     }
+  }
+
+  // Silence-check quick fix — one per unique check number across the diagnostics list.
+  const seenCheckNumbers = new Set<number>();
+  for (const diag of diagnostics) {
+    const cn = typeof diag.code === 'number' ? diag.code : undefined;
+    if (cn === undefined || seenCheckNumbers.has(cn)) continue;
+    seenCheckNumbers.add(cn);
+    const desc = describeCheck(cn);
+    const title = desc ? `Silence check #${cn} (${desc})` : `Silence check #${cn}`;
+    const action = CodeAction.create(title, CodeActionKind.QuickFix);
+    action.diagnostics = [diag];
+    action.command = { title, command: 'mcnp.silenceCheck', arguments: [cn] };
+    actions.push(action);
   }
 
   // Refactor: expand elemental ZAID at cursor position (no diagnostic needed)

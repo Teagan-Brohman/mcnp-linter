@@ -137,6 +137,20 @@ export function activate(context: ExtensionContext): void {
   );
 
   context.subscriptions.push(
+    commands.registerCommand('mcnp.silenceCheck', async (checkNumber: number) => {
+      if (typeof checkNumber !== 'number' || !Number.isFinite(checkNumber)) return;
+      const cfg = workspace.getConfiguration('mcnpLinter');
+      const current = cfg.get<number[]>('suppressChecks', []);
+      if (current.includes(checkNumber)) return;
+      const next = [...current, checkNumber].sort((a, b) => a - b);
+      await cfg.update('suppressChecks', next, true);
+      window.showInformationMessage(
+        `Silenced MCNP check #${checkNumber}. Edit mcnpLinter.suppressChecks to undo.`,
+      );
+    }),
+  );
+
+  context.subscriptions.push(
     languages.onDidChangeDiagnostics(() => updateStatusBar())
   );
 
