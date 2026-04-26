@@ -69,6 +69,7 @@ let selectionRangesEnabled = true;
 let codeLensEnabled = true;
 let warnLineLength = false;
 let suppressChecks: number[] = [];
+let ignoreTemplatePlaceholders = true;
 let formatterConfig: Partial<FormatterConfig> = {};
 let xsdirData: XsdirData | undefined;
 let xsdirStatus: XsdirStatus = { state: 'unconfigured', configuredPath: '' };
@@ -121,7 +122,7 @@ function validateDocument(textDocument: TextDocument): void {
   const uri = textDocument.uri;
 
   try {
-    const doc = parseInputFile(text);
+    const doc = parseInputFile(text, { ignoreTemplatePlaceholders });
 
     if (resolveReadFiles && doc.readCards && doc.readCards.length > 0) {
       for (const rc of doc.readCards) {
@@ -165,7 +166,11 @@ function validateDocument(textDocument: TextDocument): void {
           warnLineLength, suppressChecks,
         });
     const allErrors: ParseError[] = [...doc.parseErrors, ...crossRefErrors];
-    connection.sendDiagnostics({ uri, diagnostics: allErrors.map(toDiagnostic) });
+    const templateSet = new Set(doc.templateLines ?? []);
+    const filtered = templateSet.size === 0
+      ? allErrors
+      : allErrors.filter(e => !templateSet.has(e.range.startLine));
+    connection.sendDiagnostics({ uri, diagnostics: filtered.map(toDiagnostic) });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     connection.console.error(`Validation error for ${uri}: ${msg}`);
@@ -283,6 +288,7 @@ function applySettings(s: Record<string, unknown>): boolean {
   if (cl !== undefined) codeLensEnabled = cl;
   inlayHintSurfaceTypes = nestedBool(s.inlayHints, 'surfaceTypes') ?? inlayHintSurfaceTypes;
   if (typeof s.warnLineLength === 'boolean') warnLineLength = s.warnLineLength;
+  if (typeof s.ignoreTemplatePlaceholders === 'boolean') ignoreTemplatePlaceholders = s.ignoreTemplatePlaceholders;
   // Formatter settings (nested under s.formatter)
   if (s.formatter && typeof s.formatter === 'object') {
     formatterConfig = parseFormatterSettings(s.formatter as Record<string, unknown>);

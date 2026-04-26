@@ -37,6 +37,7 @@ export interface McnpDocument {
   blockCount: number;
   hasBrokenBlockStructure: boolean;
   originalLines?: string[];
+  templateLines?: number[]; // 0-based line numbers where {key} placeholders were replaced
 }
 
 export interface CellCard {

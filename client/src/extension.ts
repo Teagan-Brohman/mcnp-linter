@@ -35,6 +35,7 @@ export function activate(context: ExtensionContext): void {
       resolveReadFiles: config.get<boolean>('resolveReadFiles', false),
       asciiSurfaceArt: config.get<boolean>('asciiSurfaceArt', false),
       warnLineLength: config.get<boolean>('warnLineLength', false),
+      ignoreTemplatePlaceholders: config.get<boolean>('ignoreTemplatePlaceholders', true),
       suppressChecks: config.get<number[]>('suppressChecks', []),
       semanticTokensEnabled: config.get<boolean>('semanticTokens.enabled', true),
       callHierarchyEnabled: config.get<boolean>('callHierarchy.enabled', true),

@@ -28,13 +28,38 @@ function tryParse<T>(
   }
 }
 
+export interface ParseOptions {
+  /**
+   * When true (default), `{key}` template placeholders are replaced with `1`
+   * before parsing and lines that contained any placeholder are recorded in
+   * `McnpDocument.templateLines` so callers can suppress diagnostics on them.
+   */
+  ignoreTemplatePlaceholders?: boolean;
+}
+
 /**
  * Top-level parser that ties the tokenizer and block parsers together.
  * Parses an MCNP input file string into a complete McnpDocument.
  */
-export function parseInputFile(text: string): McnpDocument {
+export function parseInputFile(text: string, options: ParseOptions = {}): McnpDocument {
+  const ignoreTemplates = options.ignoreTemplatePlaceholders ?? true;
   const originalLines = splitLines(text);
-  const normalizedText = originalLines.join('\n');
+
+  const templateLines: number[] = [];
+  let normalizedText: string;
+  if (ignoreTemplates) {
+    const re = /\{[^{}\n]*\}/g;
+    const sanitizedLines = originalLines.map((line, idx) => {
+      if (line.indexOf('{') === -1) return line;
+      const replaced = line.replace(re, '1');
+      if (replaced !== line) templateLines.push(idx);
+      return replaced;
+    });
+    normalizedText = sanitizedLines.join('\n');
+  } else {
+    normalizedText = originalLines.join('\n');
+  }
+
   const tokenized = tokenizeInput(normalizedText);
 
   const cells: CellCard[] = [];
@@ -171,5 +196,6 @@ export function parseInputFile(text: string): McnpDocument {
     blockCount: tokenized.blockCount,
     hasBrokenBlockStructure: tokenized.hasBrokenBlockStructure,
     originalLines,
+    templateLines: ignoreTemplates ? templateLines : undefined,
   };
 }

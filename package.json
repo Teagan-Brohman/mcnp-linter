@@ -52,6 +52,12 @@
             "description": "Path to MCNP cross-section data directory (containing xsdir).",
             "order": 1
           },
+          "mcnpLinter.ignoreTemplatePlaceholders": {
+            "type": "boolean",
+            "default": true,
+            "description": "Replace {key} placeholders with a syntactically-valid value before parsing and suppress diagnostics on lines that contained them. Use for template files processed by Perl/Python preprocessors.",
+            "order": 4
+          },
           "mcnpLinter.validateOnType": {
             "type": "boolean",
             "default": true,
