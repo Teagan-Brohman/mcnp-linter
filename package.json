@@ -2,7 +2,7 @@
   "name": "mcnp-linter",
   "displayName": "MCNP Linter",
   "description": "Language server-based linter for MCNP input files",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "publisher": "Teagan-Brohman",
   "icon": "icon.png",
@@ -10,7 +10,10 @@
     "type": "git",
     "url": "https://github.com/Teagan-Brohman/mcnp-linter.git"
   },
-  "workspaces": ["client", "server"],
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -76,7 +79,10 @@
           },
           "mcnpLinter.materialDisplay": {
             "type": "string",
-            "enum": ["isotope", "zaid"],
+            "enum": [
+              "isotope",
+              "zaid"
+            ],
             "default": "isotope",
             "description": "How to display material components in hover: 'isotope' (U-235) or 'zaid' (92235.80c).",
             "order": 4
@@ -98,7 +104,74 @@
             "type": "array",
             "items": {
               "type": "integer",
-              "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
+              "enum": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+                18,
+                19,
+                20,
+                21,
+                22,
+                23,
+                24,
+                25,
+                26,
+                27,
+                28,
+                29,
+                30,
+                31,
+                32,
+                33,
+                34,
+                35,
+                36,
+                37,
+                38,
+                39,
+                40,
+                41,
+                42,
+                43,
+                44,
+                45,
+                46,
+                47,
+                48,
+                49,
+                50,
+                51,
+                52,
+                53,
+                54,
+                55,
+                56,
+                57,
+                58,
+                59,
+                60,
+                61,
+                62,
+                63,
+                64,
+                65,
+                66
+              ],
               "enumDescriptions": [
                 "Cell → surface reference exists",
                 "Cell → material reference exists",
@@ -231,14 +304,20 @@
         "properties": {
           "mcnpLinter.formatter.preset": {
             "type": "string",
-            "enum": ["default", "legacy"],
+            "enum": [
+              "default",
+              "legacy"
+            ],
             "default": "default",
             "description": "Formatter preset. 'default': modern MCNP6 style (5-space indent). 'legacy': 80-column limit with & continuations.",
             "order": 1
           },
           "mcnpLinter.formatter.continuationStyle": {
             "type": "string",
-            "enum": ["indent", "ampersand"],
+            "enum": [
+              "indent",
+              "ampersand"
+            ],
             "default": "indent",
             "description": "Continuation line style. 'indent': 5+ space indent (§4.4.6). 'ampersand': trailing & marker.",
             "order": 2
@@ -260,14 +339,20 @@
           },
           "mcnpLinter.formatter.tabHandling": {
             "type": "string",
-            "enum": ["convert", "preserve"],
+            "enum": [
+              "convert",
+              "preserve"
+            ],
             "default": "convert",
             "description": "Tab handling. 'convert': expand to spaces at MCNP's 8-char tab stops (§3.2.2). 'preserve': leave as-is.",
             "order": 5
           },
           "mcnpLinter.formatter.lineEnding": {
             "type": "string",
-            "enum": ["lf", "crlf"],
+            "enum": [
+              "lf",
+              "crlf"
+            ],
             "default": "lf",
             "description": "Line ending style. 'lf': Unix (\\n). 'crlf': Windows (\\r\\n).",
             "order": 6
@@ -287,7 +372,11 @@
           },
           "mcnpLinter.formatter.keywordSpacing": {
             "type": "string",
-            "enum": ["compact", "spaced", "preserve"],
+            "enum": [
+              "compact",
+              "spaced",
+              "preserve"
+            ],
             "default": "compact",
             "description": "Spacing around = in KEYWORD=value pairs. 'compact': KEY=val. 'spaced': KEY = val. 'preserve': leave as-is.",
             "order": 9
