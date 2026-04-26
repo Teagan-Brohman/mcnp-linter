@@ -943,10 +943,28 @@ NPS 1000
       const diags = validateCrossReferences(doc);
       expect(diags.find(d => d.message.includes('F7') && d.message.includes('neutron'))).toBeDefined();
     });
-    it('flags duplicate tally type+particle', () => {
-      const doc = parseInputFile(`tally dup\n1  0  -1  IMP:N=0\n2  0  1  IMP:N=0\n\n1  SO  5.0\n2  SO  10.0\n\nF1:N 1\nF11:N 2\nNPS 1000\n`);
+    it('does NOT flag tallies of the same type+particle but different numbers', () => {
+      // Per MCNP §3.2.5.4: f1:n and f11:n are both legitimate neutron tallies of type 1.
+      const doc = parseInputFile(`tally not-dup\n1  0  -1  IMP:N=0\n2  0  1  IMP:N=0\n\n1  SO  5.0\n2  SO  10.0\n\nF1:N 1\nF11:N 2\nNPS 1000\n`);
       const diags = validateCrossReferences(doc);
-      expect(diags.find(d => d.message.toLowerCase().includes('duplicate'))).toBeDefined();
+      expect(diags.find(d => d.message.toLowerCase().includes('duplicate tally'))).toBeUndefined();
+    });
+    it('flags duplicate tally NUMBER with different particles (F1:N + F1:P)', () => {
+      // Per MCNP §3.2.5.4: "Having both an f1:n card and an f1:p card in the same inp file is not allowed."
+      const doc = parseInputFile(`tally dup-num\n1  0  -1  IMP:N=0,P=0\n\n1  SO  5.0\n\nF1:N 1\nF1:P 1\nNPS 1000\nMODE N P\n`);
+      const diags = validateCrossReferences(doc);
+      expect(diags.find(d => d.message.toLowerCase().includes('duplicate tally'))).toBeDefined();
+    });
+    it('flags duplicate tally NUMBER with same particle (F4:N twice)', () => {
+      const doc = parseInputFile(`tally dup-same\n1  0  -1  IMP:N=0\n2  0  1  IMP:N=0\n\n1  SO  5.0\n2  SO  10.0\n\nF4:N 1\nF4:N 2\nNPS 1000\n`);
+      const diags = validateCrossReferences(doc);
+      expect(diags.find(d => d.message.toLowerCase().includes('duplicate tally'))).toBeDefined();
+    });
+    it('does NOT flag the user-reported case F1051124:N + F1081014:N', () => {
+      // GitHub issue #6 — both type-4 (last digit) neutron tallies, different numbers.
+      const doc = parseInputFile(`tally issue6\n1  0  -1  IMP:N=0\n2  0  1  IMP:N=0\n\n1  SO  5.0\n2  SO  10.0\n\nF1051124:N 1\nF1081014:N 2\nNPS 1000\n`);
+      const diags = validateCrossReferences(doc);
+      expect(diags.find(d => d.message.toLowerCase().includes('duplicate tally'))).toBeUndefined();
     });
     it('flags orphan modifier', () => {
       const doc = parseInputFile(`tally orphan\n1  0  -1  IMP:N=0\n\n1  SO  5.0\n\nE4 0.1 1 20\nNPS 1000\n`);

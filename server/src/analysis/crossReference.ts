@@ -775,14 +775,22 @@ function validateTallies(doc: McnpDocument, idx: DocumentIndex): ParseError[] {
     }
   }
 
-  // 21. Duplicate tally type + particle
-  const tallyKeys = new Map<string, number>();
+  // 21. Duplicate tally number — per MCNP §3.2.5.4: tally numbers must be unique across
+  // all F cards (e.g., F1:N and F1:P together are not allowed). Multiple tallies of the
+  // same type and particle but different numbers (F4:N, F14:N, F104:N) are explicitly
+  // permitted.
+  const tallyNumberMap = new Map<number, { particles?: string }>();
   for (const tally of doc.tallyCards) {
-    const key = `${tally.prefix ?? ''}:${tally.tallyType}:${tally.particles}`;
-    if (tallyKeys.has(key)) {
-      errors.push({ message: `Duplicate tally: F${tally.tallyNumber}:${tally.particles} conflicts with F${tallyKeys.get(key)}:${tally.particles} — same type and particle`, range: tally.range, severity: 'error', checkNumber: 21 });
+    const existing = tallyNumberMap.get(tally.tallyNumber);
+    if (existing) {
+      errors.push({
+        message: `Duplicate tally number F${tally.tallyNumber}:${tally.particles ?? ''} — already defined as F${tally.tallyNumber}:${existing.particles ?? ''}`,
+        range: tally.range,
+        severity: 'error',
+        checkNumber: 21,
+      });
     } else {
-      tallyKeys.set(key, tally.tallyNumber);
+      tallyNumberMap.set(tally.tallyNumber, { particles: tally.particles });
     }
   }
 
